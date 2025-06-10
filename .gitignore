@@ -1,0 +1,15 @@
+# Ignore dependencies
+node_modules/
+
+# Ignore Windows binaries
+yt-dlp.exe
+
+# Ignore logs
+*.log
+
+# Ignore environment files
+.env
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
