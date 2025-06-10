@@ -1,6 +1,6 @@
-import express from 'express';
+import { execSync, spawn } from 'child_process';
 import cors from 'cors';
-import { spawn } from 'child_process';
+import express from 'express';
 
 const app = express();
 const PORT = 3000;
@@ -8,34 +8,45 @@ const PORT = 3000;
 app.use(cors());
 
 app.get('/download', (req, res) => {
-  const { url, format } = req.query;
+  const { url } = req.query;
 
   if (!url) {
     return res.status(400).send('No URL provided');
   }
 
-  // Set fake extension based on user request
-  const fileExtension = format === 'mp3' ? 'mp3' : 'mp4';
-  res.header('Content-Disposition', `attachment; filename="download.${fileExtension}"`);
+  try {
+    // Get video title synchronously
+    const rawTitle = execSync(`yt-dlp.exe --get-title "${url}"`).toString().trim();
+    const sanitizedTitle = rawTitle.replace(/[<>:"/\\|?*]+/g, ''); // remove illegal filename chars
 
-  const ytdlpArgs =
-    format === 'mp3'
-      ? ['-f', 'bestaudio', '-o', '-', '--quiet', url]
-      : ['-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', '-o', '-', '--quiet', url];
+    res.header('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
 
-  const ytdlp = spawn('./yt-dlp', ytdlpArgs);
+    const ytdlp = spawn('yt-dlp.exe', [
+      '-f', 'bestaudio',
+      '-o', '-',
+      '--quiet',
+      '--extract-audio',
+      '--audio-format', 'mp3',
+      url
+    ]);
 
-  ytdlp.stdout.pipe(res);
 
-  ytdlp.stderr.on('data', (data) => {
-    console.error(`yt-dlp error: ${data}`);
-  });
+    ytdlp.stdout.pipe(res);
 
-  ytdlp.on('exit', (code) => {
-    if (code !== 0) {
-      console.error(`yt-dlp exited with code ${code}`);
-    }
-  });
+    ytdlp.stderr.on('data', (data) => {
+      console.error(`yt-dlp error: ${data}`);
+    });
+
+    ytdlp.on('exit', (code) => {
+      if (code !== 0) {
+        console.error(`yt-dlp exited with code ${code}`);
+      }
+    });
+
+  } catch (err) {
+    console.error('Failed to get title:', err);
+    res.status(500).send('Failed to fetch video title');
+  }
 });
 
 app.listen(PORT, () => {
