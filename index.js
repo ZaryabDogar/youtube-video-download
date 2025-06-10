@@ -23,7 +23,7 @@ app.get('/download', (req, res) => {
       ? ['-f', 'bestaudio', '-o', '-', '--quiet', url]
       : ['-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', '-o', '-', '--quiet', url];
 
-  const ytdlp = spawn('./yt-dlp.exe', ytdlpArgs);
+  const ytdlp = spawn('./yt-dlp', ytdlpArgs);
 
   ytdlp.stdout.pipe(res);
 
